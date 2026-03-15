@@ -1,0 +1,426 @@
+Build a full-stack Python web application called "Customer Orders Dashboard" 
+based on the following detailed specifications.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TECH STACK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Backend:  FastAPI (Python)
+- Database: MySQL with SQLAlchemy ORM
+- Frontend: React (Vite) + Tailwind CSS + shadcn/ui components
+- Charts:   Recharts library
+- Drag & Drop: @dnd-kit/core
+- State:    Zustand
+- HTTP Client: Axios
+- Toasts:   react-hot-toast
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DATABASE SCHEMA (MySQL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Table: customers
+  - id           INT AUTO_INCREMENT PRIMARY KEY
+  - customer_id  VARCHAR(20) UNIQUE  e.g. CUST-0001
+  - first_name   VARCHAR(100)
+  - last_name    VARCHAR(100)
+  - email        VARCHAR(255) UNIQUE
+  - phone        VARCHAR(30)
+  - street       VARCHAR(255)
+  - city         VARCHAR(100)
+  - state        VARCHAR(100)
+  - postal_code  VARCHAR(20)
+  - country      VARCHAR(100)
+  - created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+
+Table: orders
+  - id           INT AUTO_INCREMENT PRIMARY KEY
+  - order_id     VARCHAR(20) UNIQUE  e.g. ORD-0001
+  - customer_id  INT FK → customers.id
+  - product      VARCHAR(255)
+  - unit_price   DECIMAL(10,2)
+  - quantity     INT
+  - total_amount DECIMAL(10,2)  (auto = unit_price × quantity)
+  - status       ENUM('Pending','In progress','Completed')
+  - created_by   VARCHAR(100)
+  - order_date   DATETIME DEFAULT CURRENT_TIMESTAMP
+
+Table: dashboard_widgets
+  - id             INT AUTO_INCREMENT PRIMARY KEY
+  - widget_id      VARCHAR(50) UNIQUE
+  - widget_title   VARCHAR(100)
+  - widget_type    ENUM('KPI','Table','Bar Chart','Line Chart',
+                        'Pie Chart','Area Chart','Scatter Plot')
+  - description    TEXT
+  - width_cols     INT DEFAULT 2
+  - height_rows    INT DEFAULT 2
+  - grid_x         INT DEFAULT 0
+  - grid_y         INT DEFAULT 0
+  - config_json    JSON   ← stores all Data Setting fields
+  - created_at     DATETIME DEFAULT CURRENT_TIMESTAMP
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FASTAPI BACKEND — ALL ENDPOINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Orders CRUD:
+  GET    /api/orders          → list all orders (join customer data)
+  POST   /api/orders          → create order + auto-create customer record
+  PUT    /api/orders/{id}     → update order
+  DELETE /api/orders/{id}     → delete order
+
+  Auto-generate IDs:
+    customer_id: CUST-{4-digit sequential number}
+    order_id:    ORD-{4-digit sequential number}
+
+  Query params for GET /api/orders:
+    ?date_range=today|last7|last30|last90|alltime
+
+Dashboard Widgets CRUD:
+  GET    /api/widgets         → list all saved widgets with positions
+  POST   /api/widgets         → save new widget
+  PUT    /api/widgets/{id}    → update widget config or position
+  DELETE /api/widgets/{id}    → delete widget
+
+Analytics endpoints (used by widgets):
+  GET /api/analytics/kpi?metric=total_orders&aggregation=count
+      &date_range=alltime
+      → returns { value: 100 }
+
+  Supported metrics: total_orders, total_revenue, total_customers,
+                     total_sold_quantity, unit_price, quantity,
+                     total_amount
+  Supported aggregations: sum, average, count
+  Supported date ranges: today, last7, last30, last90, alltime
+
+  GET /api/analytics/chart?type=pie&field=status&date_range=alltime
+      → returns [{ label, value, color }]
+
+  GET /api/analytics/table?columns=order_id,product,quantity,
+      total_amount&sort=asc&page=1&limit=5
+      &filter_attr=status&filter_op=eq&filter_val=Pending
+      → returns { rows: [...], total: N }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FRONTEND — PAGE: Customer Orders (/orders)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Header:
+  Title: "Customer Orders"
+  Subtitle: "View and manage customer orders and details"
+  Two tabs: [Dashboard] [Table]  — both visible at all times
+
+── TAB: TABLE ──
+
+Toolbar:
+  - Search input (filters table rows by any visible column, client-side)
+  - "Create order" button (teal/green, top right)
+
+Table columns (horizontally scrollable):
+  S.no | Customer ID | Customer name | Email id | Phone number |
+  Address | Order ID | Order date | Product | Quantity |
+  Unit price | Total amount | Status | Created by | Actions
+
+Actions column:
+  - Three-dot (⋮) icon per row → context menu with [Edit] [Delete]
+
+Empty state (no orders):
+  - Centered illustration + text "No Orders Yet"
+  - "Click Create Order and enter your order information"
+  - Large "Create order" button
+
+Create / Edit Order — Modal/Drawer:
+  Title: "Create order" or "Edit order"
+  
+  Section — Customer Information:
+    First name*  |  Last name*
+    Email id*    |  Phone number*
+    Street Address*
+    City*        |  State/Province*
+    Postal code* |  Country*
+
+  Section — Order Information:
+    Choose product* (dropdown):
+      Fiber Internet 300 Mbps | 5G Unlimited Mobile Plan |
+      Fiber Internet 1 Gbps  | Business Internet 500 Mbps |
+      VoIP Corporate Package
+    Unit price*   (auto-filled based on product, editable)
+    Quantity      (number spinner, default 1)
+    Total amount* (auto = unit_price × quantity, read-only)
+    Status*       (dropdown: Pending / In progress / Completed)
+    Created by*   (free text)
+
+  Buttons: [Cancel] [Submit / Save]
+
+  Validation:
+    - All * fields required
+    - Show inline "Please fill the field" under each empty required field
+    - Do NOT submit if any required field is empty
+    - On success → close modal + show toast "Nice work! Your new order 
+      ORD-XXXX is now in the list!" (green)
+    - On edit success → toast "All set! Your changes have been saved 
+      successfully!"
+
+Delete Order:
+  - Clicking Delete from context menu → confirmation modal:
+    "Are you sure you want to delete the ORD-XXXX?"
+    Buttons: [Cancel] [Delete]
+  - On confirm → remove row + toast "Done! Your Item has been removed"
+
+── TAB: DASHBOARD ──
+
+Default empty state (no widgets configured):
+  Centered card: "Dashboard Not Configured"
+  Text: "Configure your dashboard to start viewing analytics"
+  Button: "Configure dashboard" → navigates to /dashboard/configure
+
+Date range dropdown (top right of dashboard):
+  Values: All time (default) | Today | Last 7 Days | Last 30 Days |
+          Last 90 Days
+
+Renders all saved widgets in a responsive grid.
+Each widget card shows its live data from the analytics API.
+
+Responsive layout:
+  Desktop: full multi-column grid
+  Tablet:  2-column grid, some widgets stack
+  Mobile:  single column, all widgets stacked
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FRONTEND — PAGE: Configure Dashboard (/dashboard/configure)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Layout:
+  Left panel (280px): Widget Library
+  Right area:         Drag-and-drop grid canvas
+  Top bar:            "Show data for" date dropdown + [Cancel] [Save]
+
+Widget Library Panel:
+  Collapsible sections: Charts | Tables | KPIs
+  Charts items: Bar Chart | Line Chart | Pie Chart | 
+                Area Chart | Scatter Plot
+  Tables items: Table
+  KPIs items:   KPI Value
+
+  Each item is draggable.
+
+Grid Canvas:
+  - 12-column grid
+  - Empty state message: "Drag and drop your canvas" /
+    "Drag widgets from the library on the left to start 
+     building your custom dashboard."
+  - While dragging over grid → highlight valid drop zone in GREEN
+  - On drop → place widget at that position with placeholder UI
+    Widget title defaults to "Untitled"
+
+Placed Widget Card:
+  - Shows widget title (top left)
+  - Shows placeholder value "0" until configured
+  - Hover → show grab cursor on card body
+  - Top-right icons: ⚙ (settings) and 🗑 (delete)
+  - Hover on icons → pointer cursor
+
+Widget Configuration Side Panel (opens on ⚙ click):
+  Appears as a right side panel, does NOT navigate away.
+
+  ── KPI Widget Config ──
+    Widget title*   (text input, default "Untitled")
+    Widget type*    (read-only, pre-filled)
+    Description     (optional textarea)
+    Widget size:
+      Width (Columns)*  default 2
+      Height (Rows)*    default 2
+    Data setting:
+      Select metric*  (dropdown):
+        Customer ID | Customer name | Email id | Address |
+        Order date | Product | Created by | Status |
+        Total amount | Unit price | Quantity
+      Aggregation*  (dropdown): Sum | Average | Count
+      Data format*  (dropdown): Number | Currency  (default: Number)
+      Decimal Precision*  (number input, default 0, min 0, max 5)
+    Buttons: [Cancel] [Save/Add]
+
+  ── Table Widget Config ──
+    Tabs inside panel: [Data] [Styling]
+
+    DATA tab:
+      Widget title*    (text input)
+      Widget type*     (read-only)
+      Description      (optional)
+      Widget size:
+        Width (Columns)*  default 5
+        Height (Rows)*    default 5
+      Data setting:
+        Choose columns*  (multi-select dropdown):
+          Customer ID | Customer name | Email id | Address |
+          Order date | Product | Created by | Status |
+          Total amount | Unit price | Quantity
+        Sort by  (dropdown): Ascending | Descending
+        Pagination  (dropdown): 5 | 10 | 15
+        Apply filter  (checkbox toggle)
+          When enabled shows filter row:
+            Choose attribute (dropdown): Product | Quantity | Status
+            Operator (dropdown): = | ≠ | > | >= | < | <= | Contains
+            Value (text input)
+            [Add filter] button
+      Buttons: [Cancel] [Save/Add]
+
+    STYLING tab:
+      Font size*  (number input, default 14px, min 12, max 20)
+      Header background  (color picker hex input, default #D8D8D8)
+      Live mini-preview of table with those styles applied
+      Buttons: [Cancel] [Save/Add]
+
+  ── Pie Chart Widget Config ──
+    Widget title*    (text input)
+    Widget type*     (read-only: Pie Chart)
+    Description      (optional)
+    Widget size:
+      Width (Columns)*  default 4
+      Height (Rows)*    default 4
+    Data setting:
+      Choose chart data*  (dropdown):
+        Product | Quantity | Unit price | Total amount |
+        Status | Created by
+      Show legend  (checkbox, default checked)
+    Buttons: [Cancel] [Save/Add]
+    Colors: assign using HSL Hue Distribution (evenly spaced hues)
+    Tooltip on hover: "Item 4 : 12 %"
+    When legend enabled → show color-coded legend beside chart
+    When legend disabled → show only tooltip on hover
+
+  ── Bar Chart / Line Chart / Area Chart / Scatter Plot Config ──
+    (Same pattern as Pie Chart config but appropriate fields)
+    Widget title* | Widget type* | Description
+    Widget size: Width* | Height*
+    Data setting:
+      X-axis field* (dropdown of columns)
+      Y-axis field* (dropdown of columns)
+      Show legend   (checkbox)
+    Buttons: [Cancel] [Save/Add]
+
+Widget Config Validation:
+  All * fields required. Show inline errors on Save.
+  Do NOT save if required fields are missing.
+
+After Save (widget config):
+  - Side panel closes
+  - Widget updates to show real data from analytics API
+  - Widget title updates from "Untitled" to configured name
+  - Toast: "All set! Your new widget have been added successfully!"
+
+Delete Widget (from grid):
+  - Click 🗑 → confirmation modal:
+    "Are you sure you want to delete the {widget title} widget?"
+    [Cancel] [Delete]
+  - On confirm → remove from grid + toast: "Done! Your widget has 
+    been removed"
+
+Saving the Dashboard:
+  - [Save] button → persists all widget positions + configs to DB
+  - Toast: "All set! Your changes have been saved successfully!"
+  - Navigates back to /orders (Dashboard tab)
+
+Unsaved Changes Guard:
+  - If user clicks [Cancel] or navigates away with unsaved changes →
+    show modal: "Unsaved changes — Do you want to save your changes 
+    before navigating away?" [Discard] [Save]
+  - Discard → discard all changes, go back
+  - Save → save then go back
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOAST NOTIFICATIONS (react-hot-toast)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+All toasts appear bottom-center, green background, auto-dismiss 3s.
+
+Messages:
+  Order created:        "Nice work! Your new order ORD-XXXX is now in the list!"
+  Order updated:        "All set! Your changes have been saved successfully!"
+  Order deleted:        "Done! Your Item has been removed"
+  Widget added:         "All set! Your new widget have been added successfully!"
+  Dashboard saved:      "All set! Your changes have been saved successfully!"
+  Widget deleted:       "Done! Your widget has been removed"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+UI / DESIGN TOKENS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Primary color:      #10B981 (teal-green)
+Primary hover:      #059669
+Danger color:       #EF4444
+Background:         #F9FAFB
+Card background:    #FFFFFF
+Border:             #E5E7EB
+Text primary:       #111827
+Text secondary:     #6B7280
+Font:               Inter
+Drop zone highlight: rgba(16,185,129,0.2) border 2px dashed #10B981
+Table header bg:    #F3F4F6
+Status badge colors:
+  Pending     → yellow  (#FEF3C7 bg, #D97706 text)
+  In progress → blue    (#DBEAFE bg, #2563EB text)
+  Completed   → green   (#D1FAE5 bg, #059669 text)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROJECT FILE STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+customer-orders/
+├── backend/
+│   ├── main.py
+│   ├── database.py          ← SQLAlchemy engine + session
+│   ├── models.py            ← ORM models
+│   ├── schemas.py           ← Pydantic schemas
+│   ├── routers/
+│   │   ├── orders.py
+│   │   ├── widgets.py
+│   │   └── analytics.py
+│   ├── requirements.txt
+│   └── .env                 ← DB_URL, SECRET_KEY
+├── frontend/
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── OrdersPage.tsx
+│   │   │   └── ConfigureDashboard.tsx
+│   │   ├── components/
+│   │   │   ├── OrderTable.tsx
+│   │   │   ├── CreateOrderModal.tsx
+│   │   │   ├── DeleteConfirmModal.tsx
+│   │   │   ├── DashboardGrid.tsx
+│   │   │   ├── WidgetCard.tsx
+│   │   │   ├── WidgetLibrary.tsx
+│   │   │   ├── WidgetConfigPanel.tsx
+│   │   │   ├── widgets/
+│   │   │   │   ├── KPIWidget.tsx
+│   │   │   │   ├── TableWidget.tsx
+│   │   │   │   ├── PieChartWidget.tsx
+│   │   │   │   ├── BarChartWidget.tsx
+│   │   │   │   ├── LineChartWidget.tsx
+│   │   │   │   ├── AreaChartWidget.tsx
+│   │   │   │   └── ScatterPlotWidget.tsx
+│   │   ├── store/
+│   │   │   ├── useOrderStore.ts
+│   │   │   └── useDashboardStore.ts
+│   │   ├── api/
+│   │   │   └── client.ts
+│   │   └── main.tsx
+│   ├── package.json
+│   └── vite.config.ts
+└── docker-compose.yml       ← MySQL + backend + frontend services
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADDITIONAL REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. CORS: allow all origins in dev (FastAPI CORSMiddleware)
+2. MySQL connection via .env variable DATABASE_URL
+3. Auto-create all tables on startup (SQLAlchemy create_all)
+4. Include a db_seed.py script that inserts the 5 sample orders 
+   shown in the wireframes
+5. Widget positions must persist across page refreshes (stored in DB)
+6. Dashboard date filter must re-fetch all widget data when changed
+7. All modals must trap focus and close on Escape key
+8. Table must support horizontal scroll on small screens
+9. Include README.md with setup steps:
+   pip install -r requirements.txt
+   uvicorn main:app --reload
+   npm install && npm run dev
+10. No authentication required (public app)
+
+Generate the complete working code for every file listed above.
