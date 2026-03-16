@@ -153,6 +153,84 @@ export class MemStorage implements IStorage {
       };
       this.orders.set(ordId, order);
     });
+
+    const defaultWidgets: Array<Omit<Widget, "id" | "createdAt">> = [
+      {
+        widgetId: "widget-default-1",
+        widgetTitle: "Total Orders",
+        widgetType: "KPI",
+        description: "Total number of orders",
+        widthCols: 3,
+        heightRows: 2,
+        gridX: 0,
+        gridY: 0,
+        configJson: { metric: "total_orders", aggregation: "count", dataFormat: "Number", decimalPrecision: 0 },
+      },
+      {
+        widgetId: "widget-default-2",
+        widgetTitle: "Total Revenue",
+        widgetType: "KPI",
+        description: "Sum of all order amounts",
+        widthCols: 3,
+        heightRows: 2,
+        gridX: 3,
+        gridY: 0,
+        configJson: { metric: "total_revenue", aggregation: "sum", dataFormat: "Currency", decimalPrecision: 2 },
+      },
+      {
+        widgetId: "widget-default-3",
+        widgetTitle: "Total Customers",
+        widgetType: "KPI",
+        description: "Unique customers",
+        widthCols: 3,
+        heightRows: 2,
+        gridX: 6,
+        gridY: 0,
+        configJson: { metric: "total_customers", aggregation: "count", dataFormat: "Number", decimalPrecision: 0 },
+      },
+      {
+        widgetId: "widget-default-4",
+        widgetTitle: "Orders by Status",
+        widgetType: "Pie Chart",
+        description: "Distribution of orders by status",
+        widthCols: 4,
+        heightRows: 4,
+        gridX: 0,
+        gridY: 2,
+        configJson: { chartField: "status", showLegend: true },
+      },
+      {
+        widgetId: "widget-default-5",
+        widgetTitle: "Orders by Product",
+        widgetType: "Bar Chart",
+        description: "Number of orders per product",
+        widthCols: 8,
+        heightRows: 4,
+        gridX: 4,
+        gridY: 2,
+        configJson: { xAxisField: "product", yAxisField: "quantity", showLegend: false },
+      },
+      {
+        widgetId: "widget-default-6",
+        widgetTitle: "Recent Orders",
+        widgetType: "Table",
+        description: "Latest orders overview",
+        widthCols: 12,
+        heightRows: 4,
+        gridX: 0,
+        gridY: 6,
+        configJson: {
+          columns: ["customer_id", "customer_name", "product", "total_amount", "status", "order_date"],
+          sortBy: "desc",
+          pagination: 5,
+        },
+      },
+    ];
+
+    defaultWidgets.forEach((w) => {
+      const id = this.widgetCounter++;
+      this.widgets.set(id, { ...w, id, createdAt: new Date().toISOString() });
+    });
   }
 
   async getOrders(dateRange?: string): Promise<Order[]> {
