@@ -76,8 +76,8 @@ root/
 
 ### Clone the repository
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https:https://github.com/Pava1612/customer-OrderdashboardWeb.git
+cd customer-OrderdashboardWeb
 ````
 
 ---
