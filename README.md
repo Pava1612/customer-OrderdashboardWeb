@@ -171,8 +171,4 @@ Aspiring Ai Full-Stack Developer | AI & Data Science Student
 
 Give this repo a ⭐ on GitHub!
 
-```
-
----
-
 
