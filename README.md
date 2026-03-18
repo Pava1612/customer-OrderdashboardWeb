@@ -5,7 +5,6 @@
 https://customer-orderdashboardweb.onrender.com
 
 ---
-
 ## 📌 Project Summary
 A scalable **full-stack dashboard application** designed to manage and configure customer orders efficiently. Built with a modern React + Vite frontend and a Node.js backend, the system demonstrates real-world full-stack engineering practices including API design, database integration, and production deployment.
 
