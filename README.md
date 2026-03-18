@@ -3,6 +3,11 @@
 
 🌐 **Live Demo:**  
 https://customer-orderdashboardweb.onrender.com
+---
+**Demo Video**
+
+
+https://github.com/user-attachments/assets/0a73ee20-f758-4838-8d29-450d82fcbebc
 
 ---
 ## 📌 Project Summary
