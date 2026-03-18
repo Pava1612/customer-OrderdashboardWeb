@@ -1,5 +1,5 @@
 # 🚀 Customer Order Dashboard  
-### Full-Stack Web Application (Production Ready)
+### Full-Stack Web Application 
 
 🌐 **Live Demo:**  
 https://customer-orderdashboardweb.onrender.com
