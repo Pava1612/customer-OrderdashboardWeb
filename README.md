@@ -35,7 +35,19 @@ Database (MySQL via Drizzle ORM)
 ```
 
 ---
+✨ Features
 
+📈 KPI Metrics (Total Revenue, Orders, Customers)
+
+📊 Bar Chart for product/category comparison
+
+📉 Line Chart for trend analysis over time
+
+🥧 Pie Chart for distribution insights
+
+🔍 Data filtering and dynamic updates
+
+---
 ## 🛠️ Tech Stack
 
 | Layer        | Technology |
